@@ -33,13 +33,9 @@ class Program
 
                         elevatorService.DispatchElevator(currentFloor, numberOfPeople, destinationFloor);
                     }
-                    catch (ArgumentException ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+                        Console.WriteLine($"Error: {ex.Message}");
                     }
 
                     Console.WriteLine("Press any key to continue...");

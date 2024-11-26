@@ -5,20 +5,6 @@ using System.Threading;
 
 namespace ElevatorSimulation.Domain.Entities;
 
-public enum Direction
-{
-    Stationary,
-    Up,
-    Down
-}
-
-public enum ElevatorState
-{
-    Idle,
-    Moving,
-    DoorsOpen
-}
-
 public class Elevator(int id, int maxCapacity)
 {
     public int Id { get; } = id;
@@ -28,7 +14,7 @@ public class Elevator(int id, int maxCapacity)
     public int PassengerCount { get; private set; } = 0;
     public int MaxCapacity { get; } = maxCapacity;
 
-    private Queue<int> DestinationQueueInternal { get; } = new Queue<int>();
+    private Queue<int> DestinationQueueInternal { get; } = new();
     public IEnumerable<int> DestinationQueue => DestinationQueueInternal;
 
     public void AddDestination(int floor)
@@ -39,7 +25,7 @@ public class Elevator(int id, int maxCapacity)
 
     public void Move()
     {
-        if (DestinationQueueInternal.Count == 0)
+        if (!DestinationQueueInternal.Any())
         {
             State = ElevatorState.Idle;
             CurrentDirection = Direction.Stationary;
@@ -47,8 +33,20 @@ public class Elevator(int id, int maxCapacity)
         }
 
         var nextFloor = DestinationQueueInternal.Peek();
+
+        if (CurrentFloor == nextFloor)
+        {
+            Console.WriteLine($"Elevator {Id} is already at Floor {CurrentFloor}.");
+            DestinationQueueInternal.Dequeue();
+            State = ElevatorState.Idle;
+            CurrentDirection = Direction.Stationary;
+            return;
+        }
+
         CurrentDirection = nextFloor > CurrentFloor ? Direction.Up : Direction.Down;
         State = ElevatorState.Moving;
+
+        Console.WriteLine($"Elevator {Id} moving {CurrentDirection} from Floor {CurrentFloor} to Floor {nextFloor}.");
 
         while (CurrentFloor != nextFloor)
         {
@@ -82,4 +80,18 @@ public class Elevator(int id, int maxCapacity)
     }
 
     public int AvailableSpace() => MaxCapacity - PassengerCount;
+}
+
+public enum Direction
+{
+    Stationary,
+    Up,
+    Down
+}
+
+public enum ElevatorState
+{
+    Idle,
+    Moving,
+    DoorsOpen
 }
