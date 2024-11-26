@@ -1,6 +1,8 @@
-﻿namespace ElevatorSimulation.Domain.Entities;
+﻿using ElevatorSimulation.Utilities;
 
-public class Elevator(int id, int maxCapacity)
+namespace ElevatorSimulation.Domain.Entities;
+
+public class Elevator(int id, int maxCapacity, int numberOfFloors)
 {
     public int Id { get; } = id;
     public int CurrentFloor { get; private set; } = 0; // Start at ground floor.
@@ -8,12 +10,19 @@ public class Elevator(int id, int maxCapacity)
     public ElevatorState State { get; private set; } = ElevatorState.Idle;
     public int PassengerCount { get; private set; } = 0;
     public int MaxCapacity { get; } = maxCapacity;
+    private readonly int _numberOfFloors = numberOfFloors;
 
     private Queue<int> DestinationQueueInternal { get; } = new();
     public IEnumerable<int> DestinationQueue => DestinationQueueInternal;
 
     public void AddDestination(int floor)
     {
+        if (floor < 0 || floor >= _numberOfFloors)
+        {
+            Console.WriteLine($"Invalid floor number. Please choose a floor between 0 and {_numberOfFloors - 1}.");
+            return;
+        }
+
         if (!DestinationQueueInternal.Contains(floor))
             DestinationQueueInternal.Enqueue(floor);
     }
@@ -46,19 +55,16 @@ public class Elevator(int id, int maxCapacity)
             }
 
             Console.WriteLine($"Elevator {Id} has arrived at Floor {CurrentFloor}.");
+            Console.WriteLine(new string('-', 50));
             DestinationQueueInternal.Dequeue();
 
             // Handle passengers exiting
             if (PassengerCount > 0)
             {
-                Console.Write($"How many passengers are exiting at Floor {CurrentFloor}? (Max: {PassengerCount}): ");
-                var exitingPassengers = int.Parse(Console.ReadLine() ?? "0");
-
-                if (exitingPassengers > PassengerCount)
-                {
-                    Console.WriteLine("Error: Cannot unload more passengers than present.");
-                    exitingPassengers = PassengerCount;
-                }
+                var exitingPassengers = InputHelper.GetValidatedInput(
+                    $"How many passengers are exiting at Floor {CurrentFloor}? (Max: {PassengerCount}): ",
+                    0,
+                    PassengerCount);
 
                 UnloadPassengers(exitingPassengers);
             }
@@ -73,22 +79,21 @@ public class Elevator(int id, int maxCapacity)
             // Handle passengers boarding
             if (AvailableSpace() > 0)
             {
-                Console.Write($"How many passengers are boarding at Floor {CurrentFloor}? (Max: {AvailableSpace()}): ");
-                var boardingPassengers = int.Parse(Console.ReadLine() ?? "0");
-
-                if (boardingPassengers > AvailableSpace())
-                {
-                    Console.WriteLine("Error: Cannot board more passengers than available space.");
-                    boardingPassengers = AvailableSpace();
-                }
+                var boardingPassengers = InputHelper.GetValidatedInput(
+                    $"How many passengers are boarding at Floor {CurrentFloor}? (Max: {AvailableSpace()}): ",
+                    0,
+                    AvailableSpace());
 
                 LoadPassengers(boardingPassengers);
 
                 // Add destinations for new passengers
                 for (var i = 1; i <= boardingPassengers; i++)
                 {
-                    Console.Write($"Passenger {i}, enter your destination floor: ");
-                    var newDestination = int.Parse(Console.ReadLine() ?? "0");
+                    var newDestination = InputHelper.GetValidatedInput(
+                        $"Passenger {i}, enter your destination floor: ",
+                        0,
+                        _numberOfFloors - 1);
+
                     AddDestination(newDestination);
                 }
             }

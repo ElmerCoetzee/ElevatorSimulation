@@ -33,5 +33,19 @@ public class ElevatorControlServiceTests
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => service.DispatchElevator(currentFloor: 2, numberOfPeople: 6)); // Exceeds max capacity
     }
+
+    [Fact]
+    public void DispatchElevator_EmptyMove_NoPromptsOrErrors()
+    {
+        // Arrange
+        var service = new ElevatorControlService(1, 10, 10);
+
+        // Act
+        service.DispatchElevator(currentFloor: 0, numberOfPeople: 0); // No people to board
+        var output = service.GetElevatorStatus();
+
+        // Assert
+        Assert.Contains("Idle", output); // Ensure the elevator transitions to idle without issues
+    }
 }
 

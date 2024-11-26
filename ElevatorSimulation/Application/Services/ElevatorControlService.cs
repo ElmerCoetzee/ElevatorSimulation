@@ -1,11 +1,14 @@
 ﻿using ElevatorSimulation.Domain.Entities;
+using ElevatorSimulation.Utilities;
 
 namespace ElevatorSimulation.Application.Services;
 
 public class ElevatorControlService(int numberOfElevators, int maxCapacity, int numberOfFloors)
 {
+    private readonly int _numberOfFloors = numberOfFloors;
+
     private readonly List<Elevator> _elevators = Enumerable.Range(1, numberOfElevators)
-            .Select(id => new Elevator(id, maxCapacity))
+            .Select(id => new Elevator(id, maxCapacity, numberOfFloors)) // Pass numberOfFloors to Elevator
             .ToList();
 
     public void DispatchElevator(int currentFloor, int numberOfPeople)
@@ -25,21 +28,19 @@ public class ElevatorControlService(int numberOfElevators, int maxCapacity, int 
         nearestElevator.Move(handleInitialBoarding: false); // Move to the caller's floor without boarding prompt
 
         // Board passengers and set destinations
-        Console.Write($"How many passengers are boarding at Floor {currentFloor}? (Max: {nearestElevator.AvailableSpace()}): ");
-        var passengersBoarding = int.Parse(Console.ReadLine() ?? "0");
-
-        if (passengersBoarding > nearestElevator.AvailableSpace())
-        {
-            Console.WriteLine("Error: Cannot board more passengers than available space.");
-            passengersBoarding = nearestElevator.AvailableSpace();
-        }
+        var passengersBoarding = InputHelper.GetValidatedInput(
+            $"How many passengers are boarding at Floor {currentFloor}? (Max: {nearestElevator.AvailableSpace()}): ",
+            0,
+            nearestElevator.AvailableSpace());
 
         nearestElevator.LoadPassengers(passengersBoarding);
 
         for (var i = 1; i <= passengersBoarding; i++)
         {
-            Console.Write($"Passenger {i}, enter your destination floor: ");
-            var passengerDestination = int.Parse(Console.ReadLine() ?? "0");
+            var passengerDestination = InputHelper.GetValidatedInput(
+                $"Passenger {i}, enter your destination floor: ",
+                0,
+                _numberOfFloors - 1); // Use _numberOfFloors for validation
             nearestElevator.AddDestination(passengerDestination);
         }
 
