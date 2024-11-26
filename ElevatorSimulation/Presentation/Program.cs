@@ -28,10 +28,7 @@ class Program
                         Console.Write("Enter Number of People: ");
                         var numberOfPeople = int.Parse(Console.ReadLine() ?? "0");
 
-                        Console.Write("Enter Destination Floor: ");
-                        var destinationFloor = int.Parse(Console.ReadLine() ?? "0");
-
-                        elevatorService.DispatchElevator(currentFloor, numberOfPeople, destinationFloor);
+                        elevatorService.DispatchElevator(currentFloor, numberOfPeople);
                     }
                     catch (Exception ex)
                     {

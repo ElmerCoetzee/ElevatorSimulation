@@ -1,7 +1,4 @@
 ﻿using ElevatorSimulation.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ElevatorSimulation.Application.Services;
 
@@ -11,7 +8,7 @@ public class ElevatorControlService(int numberOfElevators, int maxCapacity, int 
             .Select(id => new Elevator(id, maxCapacity))
             .ToList();
 
-    public void DispatchElevator(int currentFloor, int numberOfPeople, int destinationFloor)
+    public void DispatchElevator(int currentFloor, int numberOfPeople)
     {
         var nearestElevator = _elevators
             .OrderBy(e => Math.Abs(e.CurrentFloor - currentFloor))
@@ -25,19 +22,29 @@ public class ElevatorControlService(int numberOfElevators, int maxCapacity, int 
 
         Console.WriteLine($"Calling Elevator {nearestElevator.Id} to Floor {currentFloor}...");
         nearestElevator.AddDestination(currentFloor);
-        nearestElevator.Move();
+        nearestElevator.Move(handleInitialBoarding: false); // Move to the caller's floor without boarding prompt
 
-        nearestElevator.LoadPassengers(numberOfPeople);
+        // Board passengers and set destinations
+        Console.Write($"How many passengers are boarding at Floor {currentFloor}? (Max: {nearestElevator.AvailableSpace()}): ");
+        var passengersBoarding = int.Parse(Console.ReadLine() ?? "0");
 
-        Console.WriteLine($"Elevator {nearestElevator.Id} heading to Floor {destinationFloor}.");
-        nearestElevator.AddDestination(destinationFloor);
-        nearestElevator.Move();
+        if (passengersBoarding > nearestElevator.AvailableSpace())
+        {
+            Console.WriteLine("Error: Cannot board more passengers than available space.");
+            passengersBoarding = nearestElevator.AvailableSpace();
+        }
 
-        Console.Write($"How many passengers are exiting at Floor {destinationFloor}? (Max: {nearestElevator.PassengerCount}): ");
-        var exitingPassengers = int.Parse(Console.ReadLine() ?? "0");
-        nearestElevator.UnloadPassengers(exitingPassengers);
+        nearestElevator.LoadPassengers(passengersBoarding);
 
-        Console.WriteLine($"Elevator {nearestElevator.Id} is now Idle at Floor {nearestElevator.CurrentFloor} with {nearestElevator.PassengerCount} passengers.");
+        for (var i = 1; i <= passengersBoarding; i++)
+        {
+            Console.Write($"Passenger {i}, enter your destination floor: ");
+            var passengerDestination = int.Parse(Console.ReadLine() ?? "0");
+            nearestElevator.AddDestination(passengerDestination);
+        }
+
+        Console.WriteLine($"Elevator {nearestElevator.Id} is heading to its destinations...");
+        nearestElevator.Move(); // Handle all subsequent movements and boarding/exiting
     }
 
     public void DisplayElevatorStatus()
@@ -49,5 +56,7 @@ public class ElevatorControlService(int numberOfElevators, int maxCapacity, int 
     }
 
     public string GetElevatorStatus() => string.Join(Environment.NewLine, _elevators.Select(e =>
-                                                  $"Elevator {e.Id} | Floor: {e.CurrentFloor} | Direction: {e.CurrentDirection} | Passengers: {e.PassengerCount} | State: {e.State}"));
+        $"Elevator {e.Id} | Floor: {e.CurrentFloor} | Direction: {e.CurrentDirection} | Passengers: {e.PassengerCount} | State: {e.State}"));
+
+    public IEnumerable<Elevator> GetElevators() => _elevators;
 }
