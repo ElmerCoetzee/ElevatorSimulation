@@ -22,13 +22,7 @@ class Program
                 case "1":
                     try
                     {
-                        Console.Write("Enter Current Floor (0 for Ground Floor): ");
-                        var currentFloor = int.Parse(Console.ReadLine() ?? "0");
-
-                        Console.Write("Enter Number of People: ");
-                        var numberOfPeople = int.Parse(Console.ReadLine() ?? "0");
-
-                        elevatorService.DispatchElevator(currentFloor, numberOfPeople);
+                        elevatorService.DispatchElevator();
                     }
                     catch (Exception ex)
                     {

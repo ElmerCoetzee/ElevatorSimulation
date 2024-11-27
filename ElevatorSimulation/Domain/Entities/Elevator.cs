@@ -5,7 +5,7 @@ namespace ElevatorSimulation.Domain.Entities;
 public class Elevator(int id, int maxCapacity, int numberOfFloors)
 {
     public int Id { get; } = id;
-    public int CurrentFloor { get; private set; } = 0; // Start at ground floor.
+    public int CurrentFloor { get; private set; } = 0;
     public Direction CurrentDirection { get; private set; } = Direction.Stationary;
     public ElevatorState State { get; private set; } = ElevatorState.Idle;
     public int PassengerCount { get; private set; } = 0;
@@ -17,12 +17,6 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
 
     public void AddDestination(int floor)
     {
-        if (floor < 0 || floor >= _numberOfFloors)
-        {
-            Console.WriteLine($"Invalid floor number. Please choose a floor between 0 and {_numberOfFloors - 1}.");
-            return;
-        }
-
         if (!DestinationQueueInternal.Contains(floor))
             DestinationQueueInternal.Enqueue(floor);
     }
@@ -31,32 +25,34 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
     {
         var isFirstStop = !handleInitialBoarding;
 
-        while (DestinationQueueInternal.Any())
+        while (DestinationQueueInternal.Any() || PassengerCount > 0)
         {
             SortDestinations();
 
-            var nextFloor = DestinationQueueInternal.Peek();
-            if (CurrentFloor == nextFloor)
+            var nextFloor = DestinationQueueInternal.Any() ? DestinationQueueInternal.Peek() : CurrentFloor;
+            if (CurrentFloor == nextFloor && DestinationQueueInternal.Any())
             {
                 DestinationQueueInternal.Dequeue();
                 continue;
             }
 
-            CurrentDirection = nextFloor > CurrentFloor ? Direction.Up : Direction.Down;
-            State = ElevatorState.Moving;
-
-            Console.WriteLine($"Elevator {Id} moving {CurrentDirection} from Floor {CurrentFloor} to Floor {nextFloor}.");
-
-            while (CurrentFloor != nextFloor)
+            if (nextFloor != CurrentFloor)
             {
-                Thread.Sleep(1000); // Simulate movement delay
-                CurrentFloor += CurrentDirection == Direction.Up ? 1 : -1;
-                Console.WriteLine($"Elevator {Id} is now on Floor {CurrentFloor}.");
-            }
+                CurrentDirection = nextFloor > CurrentFloor ? Direction.Up : Direction.Down;
+                State = ElevatorState.Moving;
 
-            Console.WriteLine($"Elevator {Id} has arrived at Floor {CurrentFloor}.");
-            Console.WriteLine(new string('-', 50));
-            DestinationQueueInternal.Dequeue();
+                Console.WriteLine($"Elevator {Id} moving {CurrentDirection} from Floor {CurrentFloor} to Floor {nextFloor}.");
+
+                while (CurrentFloor != nextFloor)
+                {
+                    Thread.Sleep(1000); // Simulate movement delay
+                    CurrentFloor += CurrentDirection == Direction.Up ? 1 : -1;
+                    Console.WriteLine($"Elevator {Id} is now on Floor {CurrentFloor}.");
+                }
+
+                Console.WriteLine($"Elevator {Id} has arrived at Floor {CurrentFloor}.");
+                Console.WriteLine(new string('-', 50));
+            }
 
             // Handle passengers exiting
             if (PassengerCount > 0)
@@ -69,15 +65,26 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
                 UnloadPassengers(exitingPassengers);
             }
 
-            // Skip boarding prompt during the first stop if already handled
-            if (isFirstStop)
+            // If no destinations remain but there are still passengers
+            if (!DestinationQueueInternal.Any() && PassengerCount > 0)
             {
-                isFirstStop = false;
-                continue;
+                Console.WriteLine($"There are still {PassengerCount} passengers on the elevator.");
+                while (PassengerCount > 0)
+                {
+                    var newDestination = InputHelper.GetValidatedInput(
+                        $"Please provide a new destination floor for one of the remaining {PassengerCount} passengers: ",
+                        0,
+                        _numberOfFloors - 1);
+
+                    AddDestination(newDestination);
+
+                    // Repeat until all passengers have valid destinations
+                    Console.WriteLine($"Added Floor {newDestination} to the destination queue.");
+                }
             }
 
             // Handle passengers boarding
-            if (AvailableSpace() > 0)
+            if (!isFirstStop && AvailableSpace() > 0)
             {
                 var boardingPassengers = InputHelper.GetValidatedInput(
                     $"How many passengers are boarding at Floor {CurrentFloor}? (Max: {AvailableSpace()}): ",
@@ -86,7 +93,6 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
 
                 LoadPassengers(boardingPassengers);
 
-                // Add destinations for new passengers
                 for (var i = 1; i <= boardingPassengers; i++)
                 {
                     var newDestination = InputHelper.GetValidatedInput(
@@ -97,6 +103,8 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
                     AddDestination(newDestination);
                 }
             }
+
+            isFirstStop = false;
         }
 
         Console.WriteLine($"Elevator {Id} is now Idle at Floor {CurrentFloor} with {PassengerCount} passengers.");
@@ -106,18 +114,12 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
 
     public void LoadPassengers(int count)
     {
-        if (PassengerCount + count > MaxCapacity)
-            throw new InvalidOperationException("Exceeding maximum capacity!");
-
         PassengerCount += count;
         Console.WriteLine($"{count} passengers boarded Elevator {Id}. Current count: {PassengerCount}");
     }
 
     public void UnloadPassengers(int count)
     {
-        if (count > PassengerCount)
-            throw new InvalidOperationException("Cannot unload more passengers than present.");
-
         PassengerCount -= count;
         Console.WriteLine($"{count} passengers exited Elevator {Id}. Current count: {PassengerCount}");
     }
@@ -128,7 +130,6 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
     {
         if (!DestinationQueueInternal.Any()) return;
 
-        // Split destinations into two groups: current direction and opposite direction
         var currentDirectionDestinations = CurrentDirection == Direction.Up
             ? DestinationQueueInternal.Where(floor => floor >= CurrentFloor).OrderBy(floor => floor).ToList()
             : DestinationQueueInternal.Where(floor => floor <= CurrentFloor).OrderByDescending(floor => floor).ToList();
@@ -137,7 +138,6 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
             ? DestinationQueueInternal.Where(floor => floor < CurrentFloor).OrderByDescending(floor => floor).ToList()
             : DestinationQueueInternal.Where(floor => floor > CurrentFloor).OrderBy(floor => floor).ToList();
 
-        // Clear and repopulate the queue
         DestinationQueueInternal.Clear();
         foreach (var floor in currentDirectionDestinations.Concat(oppositeDirectionDestinations))
         {
@@ -146,16 +146,6 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
     }
 }
 
-public enum Direction
-{
-    Stationary,
-    Up,
-    Down
-}
+public enum Direction { Stationary, Up, Down }
 
-public enum ElevatorState
-{
-    Idle,
-    Moving,
-    DoorsOpen
-}
+public enum ElevatorState { Idle, Moving, DoorsOpen }

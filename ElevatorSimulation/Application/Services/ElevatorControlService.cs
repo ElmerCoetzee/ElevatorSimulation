@@ -5,59 +5,53 @@ namespace ElevatorSimulation.Application.Services;
 
 public class ElevatorControlService(int numberOfElevators, int maxCapacity, int numberOfFloors)
 {
-    private readonly int _numberOfFloors = numberOfFloors;
-
     private readonly List<Elevator> _elevators = Enumerable.Range(1, numberOfElevators)
-            .Select(id => new Elevator(id, maxCapacity, numberOfFloors)) // Pass numberOfFloors to Elevator
-            .ToList();
+        .Select(id => new Elevator(id, maxCapacity, numberOfFloors))
+        .ToList();
 
-    public void DispatchElevator(int currentFloor, int numberOfPeople)
+    public void DispatchElevator()
     {
+        var currentFloor = InputHelper.GetValidatedInput("Enter Current Floor (0 for Ground Floor): ", 0, numberOfFloors - 1);
+        var numberOfPeople = InputHelper.GetValidatedInput("Enter Number of People: ", 1, int.MaxValue);
+        var passengerDestinations = GatherPassengerDestinations(numberOfPeople);
+
         var nearestElevator = _elevators
             .OrderBy(e => Math.Abs(e.CurrentFloor - currentFloor))
-            .FirstOrDefault();
-
-        if (nearestElevator == null)
-        {
-            Console.WriteLine("No available elevator.");
-            return;
-        }
+            .FirstOrDefault() ?? throw new InvalidOperationException("No available elevator.");
 
         Console.WriteLine($"Calling Elevator {nearestElevator.Id} to Floor {currentFloor}...");
         nearestElevator.AddDestination(currentFloor);
-        nearestElevator.Move(handleInitialBoarding: false); // Move to the caller's floor without boarding prompt
+        nearestElevator.Move(false);
 
-        // Board passengers and set destinations
-        var passengersBoarding = InputHelper.GetValidatedInput(
-            $"How many passengers are boarding at Floor {currentFloor}? (Max: {nearestElevator.AvailableSpace()}): ",
-            0,
-            nearestElevator.AvailableSpace());
+        nearestElevator.LoadPassengers(numberOfPeople);
 
-        nearestElevator.LoadPassengers(passengersBoarding);
-
-        for (var i = 1; i <= passengersBoarding; i++)
+        foreach (var destination in passengerDestinations)
         {
-            var passengerDestination = InputHelper.GetValidatedInput(
-                $"Passenger {i}, enter your destination floor: ",
-                0,
-                _numberOfFloors - 1); // Use _numberOfFloors for validation
-            nearestElevator.AddDestination(passengerDestination);
+            nearestElevator.AddDestination(destination);
         }
 
-        Console.WriteLine($"Elevator {nearestElevator.Id} is heading to its destinations...");
-        nearestElevator.Move(); // Handle all subsequent movements and boarding/exiting
+        nearestElevator.Move();
+    }
+
+    private List<int> GatherPassengerDestinations(int numberOfPeople)
+    {
+        var destinations = new List<int>();
+        for (var i = 1; i <= numberOfPeople; i++)
+        {
+            destinations.Add(InputHelper.GetValidatedInput($"Passenger {i}, enter your destination floor: ", 0, numberOfFloors - 1));
+        }
+
+        return destinations;
     }
 
     public void DisplayElevatorStatus()
     {
         foreach (var elevator in _elevators)
         {
-            Console.WriteLine($"Elevator {elevator.Id} | Floor: {elevator.CurrentFloor} | Direction: {elevator.CurrentDirection} | Passengers: {elevator.PassengerCount} | State: {elevator.State}");
+            Console.WriteLine($"Elevator {elevator.Id} | Floor: {elevator.CurrentFloor} | Direction: {elevator.CurrentDirection} | Passengers: {elevator.PassengerCount}");
         }
     }
 
     public string GetElevatorStatus() => string.Join(Environment.NewLine, _elevators.Select(e =>
-        $"Elevator {e.Id} | Floor: {e.CurrentFloor} | Direction: {e.CurrentDirection} | Passengers: {e.PassengerCount} | State: {e.State}"));
-
-    public IEnumerable<Elevator> GetElevators() => _elevators;
+                                                  $"Elevator {e.Id} | Floor: {e.CurrentFloor} | Direction: {e.CurrentDirection} | Passengers: {e.PassengerCount}"));
 }

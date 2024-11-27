@@ -1,6 +1,7 @@
 ﻿namespace ElevatorSimulation.Domain.Interfaces;
+
 public interface IElevatorControlService
 {
-    void DispatchElevator(int currentFloor, int numberOfPeople, int destinationFloor);
+    void DispatchElevator();
     void DisplayElevatorStatus();
 }
