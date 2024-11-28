@@ -30,6 +30,7 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
             SortDestinations();
 
             var nextFloor = DestinationQueueInternal.Any() ? DestinationQueueInternal.Peek() : CurrentFloor;
+
             if (CurrentFloor == nextFloor && DestinationQueueInternal.Any())
             {
                 DestinationQueueInternal.Dequeue();
@@ -63,23 +64,11 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
                     PassengerCount);
 
                 UnloadPassengers(exitingPassengers);
-            }
 
-            // If no destinations remain but there are still passengers
-            if (!DestinationQueueInternal.Any() && PassengerCount > 0)
-            {
-                Console.WriteLine($"There are still {PassengerCount} passengers on the elevator.");
-                while (PassengerCount > 0)
+                if (PassengerCount == 0 && !DestinationQueueInternal.Any())
                 {
-                    var newDestination = InputHelper.GetValidatedInput(
-                        $"Please provide a new destination floor for one of the remaining {PassengerCount} passengers: ",
-                        0,
-                        _numberOfFloors - 1);
-
-                    AddDestination(newDestination);
-
-                    // Repeat until all passengers have valid destinations
-                    Console.WriteLine($"Added Floor {newDestination} to the destination queue.");
+                    Console.WriteLine("All passengers have exited. Elevator operations completed.");
+                    break;
                 }
             }
 
@@ -104,10 +93,26 @@ public class Elevator(int id, int maxCapacity, int numberOfFloors)
                 }
             }
 
+            // Handle remaining passengers' destinations
+            if (!DestinationQueueInternal.Any() && PassengerCount > 0)
+            {
+                Console.WriteLine($"There are still {PassengerCount} passengers on the elevator.");
+                for (var i = 0; i < PassengerCount; i++)
+                {
+                    var newDestination = InputHelper.GetValidatedInput(
+                        $"Please provide a new destination floor for passenger {i + 1}: ",
+                        0,
+                        _numberOfFloors - 1);
+
+                    AddDestination(newDestination);
+                    Console.WriteLine($"Added Floor {newDestination} to the destination queue.");
+                }
+            }
+
             isFirstStop = false;
         }
 
-        Console.WriteLine($"Elevator {Id} is now Idle at Floor {CurrentFloor} with {PassengerCount} passengers.");
+        Console.WriteLine($"Elevator {Id} has completed all operations and is now Idle at Floor {CurrentFloor}.");
         State = ElevatorState.Idle;
         CurrentDirection = Direction.Stationary;
     }

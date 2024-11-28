@@ -4,7 +4,7 @@ class Program
 {
     static void Main()
     {
-        var elevatorService = new ElevatorControlService(numberOfElevators: 3, maxCapacity: 10, numberOfFloors: 11);
+        var elevatorService = new ElevatorControlService(numberOfElevators: 3, maxCapacity: 10, numberOfFloors: 10);
 
         while (true)
         {
@@ -22,7 +22,7 @@ class Program
                 case "1":
                     try
                     {
-                        elevatorService.DispatchElevator();
+                        elevatorService.InteractiveDispatchElevator();
                     }
                     catch (Exception ex)
                     {
